@@ -5,6 +5,7 @@ public class Shell {
     private static Map<Integer, Process> backgroundJobs = new HashMap<>();
     private static Map<Integer, String> jobCommands = new HashMap<>();
     private static int jobCounter = 1;
+    private static String currentDirectory = System.getProperty("user.dir");
 
     public static void main(String[] args) throws IOException {
         Scanner scanner = new Scanner(System.in);
@@ -26,9 +27,10 @@ public class Shell {
 
     public static void changeDirectory(String[] tokens) {
         if (tokens.length > 1) {
-            File dir = new File(tokens[1]);
+            File dir = new File(currentDirectory, tokens[1]);
             if (dir.exists() && dir.isDirectory()) {
-                System.setProperty("user.dir", dir.getAbsolutePath());
+                currentDirectory = dir.getAbsolutePath();
+
             } else {
                 System.out.println("No such directory.");
             }
@@ -38,7 +40,7 @@ public class Shell {
     }
 
     public static void printDirectory() {
-        System.out.println(System.getProperty("user.dir"));
+        System.out.println(currentDirectory);
     }
 
     public static void terminateShell() {
@@ -62,7 +64,7 @@ public class Shell {
     }
 
     public static void listFiles() {
-        File current = new File(System.getProperty("user.dir"));
+        File current = new File(currentDirectory);
         for (String file : Objects.requireNonNull(current.list())) {
             System.out.println(file);
         }
@@ -87,7 +89,7 @@ public class Shell {
         if (tokens.length < 2) {
             System.out.println("Usage: mkdir [directory]");
         } else {
-            File dir = new File(tokens[1]);
+            File dir = new File(currentDirectory, tokens[1]);
             if (!dir.exists()) {
                 dir.mkdir();
             } else {
@@ -100,7 +102,7 @@ public class Shell {
         if (tokens.length < 2) {
             System.out.println("Usage: rmdir [directory]");
         } else {
-            File dir = new File(tokens[1]);
+            File dir = new File(currentDirectory, tokens[1]);
             if (dir.exists() && dir.isDirectory() && Objects.requireNonNull(dir.list()).length == 0) {
                 dir.delete();
             } else {
@@ -113,7 +115,7 @@ public class Shell {
         if (tokens.length < 2) {
             System.out.println("Usage: rm [filename]");
         } else {
-            File file = new File(tokens[1]);
+            File file = new File(currentDirectory, tokens[1]);
             if (file.exists()) {
                 file.delete();
             } else {
@@ -126,7 +128,7 @@ public class Shell {
         if (tokens.length < 2) {
             System.out.println("Usage: touch [filename]");
         } else {
-            File file = new File(tokens[1]);
+            File file = new File(currentDirectory, tokens[1]);
             try {
                 if (!file.exists()) {
                     file.createNewFile();
@@ -244,7 +246,7 @@ public class Shell {
     private static void runExternalCommand(String[] tokens, boolean background, String fullCommand) {
         try {
             ProcessBuilder builder = new ProcessBuilder(tokens);
-            builder.directory(new File(System.getProperty("user.dir")));
+            builder.directory(new File(currentDirectory));
             if (!background) {
                 Process process = builder.inheritIO().start();
                 process.waitFor();

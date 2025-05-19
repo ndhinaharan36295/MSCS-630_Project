@@ -2,35 +2,48 @@ import java.io.*;
 import java.util.*;
 
 public class Shell {
+    // Maps to store background jobs and their corresponding commands
     private static Map<Integer, Process> backgroundJobs = new HashMap<>();
     private static Map<Integer, String> jobCommands = new HashMap<>();
+    
+    // Counter for job IDs
     private static int jobCounter = 1;
+    
+    // Used to store the current working directory info
     private static String currentDirectory = System.getProperty("user.dir");
 
     public static void main(String[] args) throws IOException {
         Scanner scanner = new Scanner(System.in);
         while (true) {
+            // Prompt for user input
             System.out.print("shell> ");
+            // Read and trim input
             String input = scanner.nextLine().trim();
+            // Skip if input is empty
             if (input.isEmpty()) continue;
 
+            // Check if command should be run as a background job
             boolean runInBackground = input.endsWith("&");
+            // Remove '&' if present in background job to properly parse commands
             if (runInBackground) input = input.substring(0, input.length() - 1).trim();
 
             String[] tokens = input.split("\\s+");
 
+            // Handle built-in commands, if present in input
             if (handleBuiltInCommands(tokens)) continue;
 
+            // Run external command
             runExternalCommand(tokens, runInBackground, input);
         }
     }
 
+    // method to handle Changing the current working directory
     public static void changeDirectory(String[] tokens) {
         if (tokens.length > 1) {
             File dir = new File(currentDirectory, tokens[1]);
             if (dir.exists() && dir.isDirectory()) {
+                // Update current directory in memory -- so can used across the program
                 currentDirectory = dir.getAbsolutePath();
-
             } else {
                 System.out.println("No such directory.");
             }
@@ -39,18 +52,21 @@ public class Shell {
         }
     }
 
+    // method to handle Printing the current working directory
     public static void printDirectory() {
         System.out.println(currentDirectory);
     }
 
+    // method to handle Terminating the shell and clean up background jobs
     public static void terminateShell() {
         System.out.println("Exiting shell...");
         for (Process process : backgroundJobs.values()) {
-            process.destroy();
+            process.destroy(); // Destroy all background processes
         }
-        System.exit(0);
+        System.exit(0);  // Exit the program
     }
 
+    // method to handle Echoing the input back to the user
     public static void echo(String[] tokens) {
         for (int i = 1; i < tokens.length; i++) {
             System.out.print(tokens[i] + " ");
@@ -58,11 +74,14 @@ public class Shell {
         System.out.println();
     }
 
+    // method to handle Clearing the terminal screen
     public static void clear() {
+        // ANSI escape code to clear screen
         System.out.print("\033[H\033[2J");
         System.out.flush();
     }
 
+    // method to handle Listing files in the current directory
     public static void listFiles() {
         File current = new File(currentDirectory);
         for (String file : Objects.requireNonNull(current.list())) {
@@ -70,21 +89,28 @@ public class Shell {
         }
     }
 
+    // method to handle Displaying the contents of a file
     private static void displayFileContents(String[] tokens) {
         if (tokens.length < 2) {
             System.out.println("Usage: cat [filename]");
         } else {
-            try (BufferedReader br = new BufferedReader(new FileReader(tokens[1]))) {
+            File file = new File(currentDirectory, tokens[1]); // Resolve relative to currentDirectory
+            if (!file.exists() || !file.isFile()) {
+                System.out.println("File not found.");
+                return;
+            }
+            try (BufferedReader br = new BufferedReader(new FileReader(file))) {
                 String line;
                 while ((line = br.readLine()) != null) {
                     System.out.println(line);
                 }
             } catch (IOException e) {
-                System.out.println("File not found.");
+                System.out.println("Error reading file: " + e.getMessage());
             }
         }
     }
 
+    // method to handle Creating a new directory
     private static void makeDirectory(String[] tokens) {
         if (tokens.length < 2) {
             System.out.println("Usage: mkdir [directory]");
@@ -98,6 +124,7 @@ public class Shell {
         }
     }
 
+    // method to handle Removing a directory, if empty
     private static void removeDirectory(String[] tokens) {
         if (tokens.length < 2) {
             System.out.println("Usage: rmdir [directory]");
@@ -111,6 +138,7 @@ public class Shell {
         }
     }
 
+    // method to handle Removing a file
     private static void removeFile(String[] tokens) {
         if (tokens.length < 2) {
             System.out.println("Usage: rm [filename]");
@@ -124,6 +152,7 @@ public class Shell {
         }
     }
 
+    // method to handle the Creation of a file or update it's timestamp (if already present)
     private static void touchFile(String[] tokens) {
         if (tokens.length < 2) {
             System.out.println("Usage: touch [filename]");
@@ -141,6 +170,7 @@ public class Shell {
         }
     }
 
+    // method to handle Killing of a background process by its PID
     public static boolean killProcess(String[] tokens) {
         if (tokens.length > 1) {
             try {
@@ -166,12 +196,14 @@ public class Shell {
         }
     }
 
+    // method to handle the Listing all background jobs
     public static void listBackgroundJobs() {
         for (Map.Entry<Integer, Process> entry : backgroundJobs.entrySet()) {
             System.out.println("[" + entry.getKey() + "] PID: " + entry.getValue().pid() + " CMD: " + jobCommands.get(entry.getKey()));
         }
     }
 
+    // Bring a background job to the foreground
     public static void bringToForeground(String[] tokens) {
         if (tokens.length > 1) {
             try {
@@ -192,6 +224,7 @@ public class Shell {
         }
     }
 
+    // method to Handle all the built-in shell commands
     private static boolean handleBuiltInCommands(String[] tokens) {
         String command = tokens[0];
         switch (command) {
@@ -243,17 +276,21 @@ public class Shell {
         }
     }
 
+    // Run an external command
     private static void runExternalCommand(String[] tokens, boolean background, String fullCommand) {
         try {
+            // Create a process builder
             ProcessBuilder builder = new ProcessBuilder(tokens);
             builder.directory(new File(currentDirectory));
             if (!background) {
+                // Run in foreground
                 Process process = builder.inheritIO().start();
-                process.waitFor();
+                process.waitFor();   // Wait for the process to complete
             } else {
+                // Run in background
                 Process process = builder.start();
-                backgroundJobs.put(jobCounter, process);
-                jobCommands.put(jobCounter, fullCommand);
+                backgroundJobs.put(jobCounter, process);  // Add to background jobs
+                jobCommands.put(jobCounter, fullCommand);  // Store the command
                 System.out.println("Started background job [" + jobCounter + "] PID: " + process.pid());
                 jobCounter++;
             }

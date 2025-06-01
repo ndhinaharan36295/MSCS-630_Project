@@ -21,7 +21,7 @@ class ScheduledProcess implements Comparable<ScheduledProcess> {
 
     // Method to compare processes based on priority (used for priority-based scheduling)
     @Override
-    public int comparePriority(ScheduledProcess o) {
+    public int compareTo(ScheduledProcess o) {
         return Integer.compare(this.priority, o.priority);
     }
 }
@@ -35,9 +35,11 @@ public class ShellScheduler {
         List<ScheduledProcess> processList = new ArrayList<>();
 
         // Simulate input: Add processes to the list with predefined attributes
-        processList.add(new ScheduledProcess(pidCounter++, 2, "ProcessA", 5, 0));
-        processList.add(new ScheduledProcess(pidCounter++, 1, "ProcessB", 3, 1));
-        processList.add(new ScheduledProcess(pidCounter++, 3, "ProcessC", 6, 2));
+        processList.add(new ScheduledProcess(pidCounter++, 2, "Process A", 5, 0));
+        processList.add(new ScheduledProcess(pidCounter++, 1, "Process B", 3, 0));
+        processList.add(new ScheduledProcess(pidCounter++, 5, "Process C", 6, 3));
+        processList.add(new ScheduledProcess(pidCounter++, 4, "Process D", 1, 5));
+        processList.add(new ScheduledProcess(pidCounter++, 3, "Process E", 4, 6));
 
         // Command prompt for the user to choose a scheduling algorithm
         System.out.println("Choose scheduling algorithm: (1) Round-Robin (2) Priority-Based");
@@ -54,6 +56,17 @@ public class ShellScheduler {
         }
     }
 
+    public static void addProcessesToQueue(List<ScheduledProcess> processes, int time, Queue<ScheduledProcess> queue) {
+        for (Iterator<ScheduledProcess> it = processes.iterator(); it.hasNext();) {
+            ScheduledProcess p = it.next();
+
+            if (p.arrivalTime <= time) {
+                queue.add(p);
+                it.remove();
+            }
+        }
+    }
+
     // Implements Round-Robin scheduling algorithm
     public static void roundRobinScheduling(List<ScheduledProcess> processes, int quantum) throws InterruptedException {
         // Queue to manage processes in Round-Robin fashion
@@ -66,14 +79,7 @@ public class ShellScheduler {
         // Continue until all processes are completed
         while (!processes.isEmpty() || !queue.isEmpty()) {
             // Add processes to the queue based on their arrival time
-            for (Iterator<ScheduledProcess> it = processes.iterator(); it.hasNext();) {
-                ScheduledProcess p = it.next();
-
-                if (p.arrivalTime <= time) {
-                    queue.add(p);
-                    it.remove();
-                }
-            }
+            addProcessesToQueue(processes, time, queue);
 
             // Execute the process at the front of the queue
             if (!queue.isEmpty()) {
@@ -92,6 +98,10 @@ public class ShellScheduler {
                 // Update remaining time for the process (will be non-zero if quantum was less than remaining time)
                 current.remainingTime -= executeTime;
 
+                // after execution is completed
+                
+                // Add processes to the queue -- if any processes have arrived duringe execution time
+                addProcessesToQueue(processes, time, queue);
                 // If remaining time is non-zero, the process is not completed. add the process back to the queue
                 if (current.remainingTime > 0) {
                     queue.add(current);

@@ -7,6 +7,8 @@ class ScheduledProcess implements Comparable<ScheduledProcess> {
     int burstTime;          // Total time required for the process
     int remainingTime;      // Remaining time for the process
     int arrivalTime;        // Time at which the process arrives in the queue
+    int startTime;          // Time at which the process starts execution
+    int completionTime;     // Time at which the process completes execution
 
     // Constructor to initialize a scheduled process
     public ScheduledProcess(int pid, int priority, String command, int burstTime, int arrivalTime) {
@@ -17,6 +19,7 @@ class ScheduledProcess implements Comparable<ScheduledProcess> {
         this.remainingTime = burstTime;  // Initially, remaining time is equal to burst time
         this.priority = priority;
         this.arrivalTime = arrivalTime;
+        this.startTime = -1;
     }
 
     // Method to compare processes based on priority (used for priority-based scheduling)
@@ -35,11 +38,11 @@ public class ShellScheduler {
         List<ScheduledProcess> processList = new ArrayList<>();
 
         // Simulate input: Add processes to the list with predefined attributes
-        processList.add(new ScheduledProcess(pidCounter++, 2, "Process A", 5, 0));
-        processList.add(new ScheduledProcess(pidCounter++, 1, "Process B", 3, 0));
-        processList.add(new ScheduledProcess(pidCounter++, 5, "Process C", 6, 3));
-        processList.add(new ScheduledProcess(pidCounter++, 4, "Process D", 1, 5));
-        processList.add(new ScheduledProcess(pidCounter++, 3, "Process E", 4, 6));
+        processList.add(new ScheduledProcess(pidCounter++, 3, "Process A", 8, 0));
+        processList.add(new ScheduledProcess(pidCounter++, 1, "Process B", 4, 2));
+        processList.add(new ScheduledProcess(pidCounter++, 2, "Process C", 6, 4));
+        processList.add(new ScheduledProcess(pidCounter++, 4, "Process D", 7, 6));
+        processList.add(new ScheduledProcess(pidCounter++, 1, "Process E", 5, 7));
 
         // Command prompt for the user to choose a scheduling algorithm
         System.out.println("Choose scheduling algorithm: (1) Round-Robin (2) Priority-Based");
@@ -54,6 +57,31 @@ public class ShellScheduler {
         } else {
             priorityBasedScheduling(new ArrayList<>(processList));
         }
+
+        // calculate the performance metrics
+        // waiting time, turnaround time, and response time of each processes
+        int totalWaitingTime = 0, totalTurnAroundTime = 0, totalResponseTime = 0;
+
+        for (ScheduledProcess p : processList) {
+            int turnAroundTime = p.completionTime - p.arrivalTime;
+            int waitingTime = turnAroundTime - p.burstTime;
+            int responseTime = p.startTime - p.arrivalTime;
+
+            System.out.println("Process ID: " + p.pid +
+                    ", Turnaround Time: " + turnAroundTime +
+                    ", Waiting Time: " + waitingTime +
+                    ", Response Time: " + responseTime);
+
+            totalWaitingTime += waitingTime;
+            totalTurnAroundTime += turnAroundTime;
+            totalResponseTime += responseTime;
+        }
+
+        // Calculate and print average metrics
+        int n = processList.size();
+        System.out.println("\nAverage Turnaround Time: " + (double) totalTurnAroundTime / n);
+        System.out.println("Average Waiting Time: " + (double) totalWaitingTime / n);
+        System.out.println("Average Response Time: " + (double) totalResponseTime / n);
     }
 
     public static void addProcessesToQueue(List<ScheduledProcess> processes, int time, Queue<ScheduledProcess> queue) {
@@ -90,6 +118,11 @@ public class ShellScheduler {
 
                 System.out.println("Time " + time + ": Executing " + current.command + " (PID: " + current.pid + ") for " + executeTime + "s");
 
+                // If this is the first time the process is being executed, set its start time
+                if (current.startTime == -1) {
+                    current.startTime = time;
+                }
+
                 // Simulate process execution with a sleep
                 Thread.sleep(executeTime * 500);
 
@@ -106,6 +139,9 @@ public class ShellScheduler {
                 if (current.remainingTime > 0) {
                     queue.add(current);
                 } else {
+                    // If the process is completed, set its completion time
+                    current.completionTime = time;
+
                     System.out.println("Time " + time + ": " + current.command + " completed.\n");
                 }
             } else {
@@ -119,6 +155,7 @@ public class ShellScheduler {
 
     // Implements Priority-Based scheduling algorithm
     public static void priorityBasedScheduling(List<ScheduledProcess> processes) throws InterruptedException {
+        List<ScheduledProcess> allProcesses = new ArrayList<>(processes);
         // Priority queue to manage processes based on their priority
         PriorityQueue<ScheduledProcess> pq = new PriorityQueue<>();
         // Tracks the current time in the scheduler
@@ -126,37 +163,67 @@ public class ShellScheduler {
 
         System.out.println("\n--- Priority-Based Scheduling ---\n");
 
+        ScheduledProcess current = null;
+        
         // Continue until all processes are completed
-        while (!processes.isEmpty() || !pq.isEmpty()) {
-            // Add processes to the priority queue based on their arrival time
+        while (!processes.isEmpty() || !pq.isEmpty() || current != null) {
+            // Add processes to the priority queue as they arrive at the current time
             for (Iterator<ScheduledProcess> it = processes.iterator(); it.hasNext();) {
                 ScheduledProcess p = it.next();
-
-                if (p.arrivalTime <= time) {
+                if (p.arrivalTime == time) {
+                    // Add the process to the priority queue
                     pq.add(p);
+                    // Remove the process from the list of unprocessed processes
                     it.remove();
                 }
             }
 
-            // Execute the process with the highest priority (lowest priority number)
-            if (!pq.isEmpty()) {
-                ScheduledProcess current = pq.poll();
+            // Check for preemption: If a higher-priority process is available, preempt the current process
+            if (current != null && !pq.isEmpty() && pq.peek().priority < current.priority) {
+                System.out.println("Time " + time + ": Preempting " + current.command + " for " + pq.peek().command);
 
-                System.out.println("Time " + time + ": Executing " + current.command + " (PID: " + current.pid + ", Priority: " + current.priority + ") for " + current.burstTime + "s");
+                // Add the current process back to the priority queue
+                pq.add(current);
 
-                // Simulate process execution
-                Thread.sleep(current.burstTime * 500);
+                // Reset the current process to allow the higher-priority process to execute
+                current = null;
+            }
 
-                // Update current time -- here, the entire process is completed (unlike, Round-Robin where we might have partial execution)
-                time += current.burstTime;
+            // Select the next process to execute from the priority queue
+            if (current == null && !pq.isEmpty()) {
+                // Retrieve and remove the highest-priority process from the queue
+                current = pq.poll();
+                
+                // If this is the first time the process is being executed, set its start time
+                if (current.startTime == -1) {
+                    current.startTime = time;
+                }
+            }
 
-                System.out.println("Time " + time + ": " + current.command + " completed.\n");
+            // Execute the current process for one unit of time
+            if (current != null) {
+                System.out.println("Time " + time + ": Executing " + current.command + " (PID: " + current.pid + ", Priority: " + current.priority + ")");
+
+                // Simulate execution time
+                Thread.sleep(500);
+                // Decrease the remaining time of the current process
+                current.remainingTime--;
+
+                // Check if the process has completed execution
+                if (current.remainingTime == 0) {
+                    // If the process is completed, set its completion time
+                    current.completionTime = time + 1;
+                    System.out.println("Time " + (time + 1) + ": " + current.command + " completed.\n");
+                    current = null;
+                }
             } else {
-                // If no process is ready at the current timestamp, the scheduler is idle
+                // If no process is ready to execute, the scheduler remains idle
                 System.out.println("Time " + time + ": Idle");
                 Thread.sleep(500);
-                time++;
             }
+            
+            // Increment the current time in the scheduler
+            time++;
         }
     }
 }

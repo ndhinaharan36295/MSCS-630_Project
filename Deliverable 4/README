@@ -1,0 +1,9 @@
+Below is a brief explanation of each java file and its purpose.
+
+FilePermission.java            --       Purpose: Manages file permissions for users and roles.
+IntegratedShell.java           --       Purpose: To integrate all the features into an unified shell.
+PagingSystem.java              --       Purpose: Implements the paging system with FIFO and LRU algorithms.
+ProcessSynchronization.java    --       Purpose: Implements Producer-Consumer problem with Semaphores.
+ShellCommands.java             --       Purpose: Implements the core shell functionalities and built-in commands.
+ShellScheduler.java            --       Purpose: Implements process scheduling policies (Round-Robin and Priority scheduling).
+UserAuthentication.java        --       Purpose: Handles User authentication.

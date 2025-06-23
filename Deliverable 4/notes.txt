@@ -1,0 +1,1 @@
+user has read the example text file to test file access based on user permissions

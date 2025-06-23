@@ -1,0 +1,4 @@
+notes.txt, def, read
+notes.txt, ghi, read
+notes.txt, ghi, write
+script.sh, def, execute

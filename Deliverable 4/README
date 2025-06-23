@@ -1,4 +1,4 @@
-Below is a brief explanation of each java file and its purpose.
+Below is a brief explanation of each .java file and its purpose.
 
 FilePermission.java            --       Purpose: Manages file permissions for users and roles.
 IntegratedShell.java           --       Purpose: To integrate all the features into an unified shell.
@@ -7,3 +7,7 @@ ProcessSynchronization.java    --       Purpose: Implements Producer-Consumer pr
 ShellCommands.java             --       Purpose: Implements the core shell functionalities and built-in commands.
 ShellScheduler.java            --       Purpose: Implements process scheduling policies (Round-Robin and Priority scheduling).
 UserAuthentication.java        --       Purpose: Handles User authentication.
+
+user.txt           --    Text file with username, password, and role definitions
+permissions.txt    --    Text file with permissions for an user
+notes.txt          --    dummy text file to test access with permissions
